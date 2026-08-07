@@ -1,0 +1,4 @@
+*.key
+secrets.h
+.env
+*.log

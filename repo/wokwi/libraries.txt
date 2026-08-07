@@ -1,0 +1,3 @@
+WiFi
+HTTPClient
+DHT sensor library for ESPx (DHTesp)
