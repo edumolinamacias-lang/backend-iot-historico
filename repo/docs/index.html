@@ -178,7 +178,7 @@
     border-radius: 12px;
     padding: 16px;
   }
-  .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .history-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
   .table-responsive { width: 100%; overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
   th { text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; color: var(--text-dim); padding: 8px 10px; border-bottom: 1px solid var(--line); }
@@ -291,7 +291,15 @@
   <section class="history">
     <div class="history-head">
       <div class="chart-title" style="margin:0;">Auditoría de Datos Históricos</div>
-      <button id="exportBtn" style="background: var(--good); color:#0e1a22; font-weight:600; border:none;">📥 Exportar CSV</button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <select id="rowLimitSelect">
+          <option value="15">Últimas 15</option>
+          <option value="30">Últimas 30</option>
+          <option value="50">Últimas 50</option>
+          <option value="all">Todas</option>
+        </select>
+        <button id="exportBtn" style="background: var(--good); color:#0e1a22; font-weight:600; border:none;">📥 Exportar CSV</button>
+      </div>
     </div>
     <div id="tableWrap">Cargando...</div>
   </section>
@@ -307,6 +315,7 @@ let charts = {};
 let rawData = [];
 let currentDevice = "";
 let selectedHours = 1;
+let rowLimit = 15;
 
 async function fetchMediciones() {
   const start = performance.now();
@@ -403,9 +412,11 @@ function filterByTime(rows) {
 }
 
 function buildChart(canvasId, label, color, points) {
-  const ctx = document.getElementById(canvasId).getContext("2d");
-  if (charts[canvasId]) charts[canvasId].destroy();
+  const canvasEl = document.getElementById(canvasId);
+  const existing = Chart.getChart(canvasEl);
+  if (existing) existing.destroy();
 
+  const ctx = canvasEl.getContext("2d");
   charts[canvasId] = new Chart(ctx, {
     type: "line",
     data: {
@@ -441,6 +452,7 @@ function updateCharts(rows) {
 
 function updateTable() {
   const filtered = filterByTime(rawData);
+  const rowsToShow = rowLimit === "all" ? filtered : filtered.slice(0, Number(rowLimit));
   const wrap = document.getElementById("tableWrap");
   
   wrap.innerHTML = `
@@ -450,7 +462,7 @@ function updateTable() {
           <tr><th>Dispositivo</th><th>Variable</th><th>Valor</th><th>Unidad</th><th>Fecha / Hora</th></tr>
         </thead>
         <tbody>
-          ${filtered.slice(0, 15).map(r => `
+          ${rowsToShow.map(r => `
             <tr>
               <td><b>${r.id_dispositivo ?? "—"}</b></td>
               <td><span class="tag ${r.tipo_variable}">${r.tipo_variable}</span></td>
@@ -502,6 +514,11 @@ document.getElementById("deviceSelect").addEventListener("change", (e) => {
 
 document.getElementById("exportBtn").addEventListener("click", exportToCSV);
 document.getElementById("refreshBtn").addEventListener("click", loadAll);
+
+document.getElementById("rowLimitSelect").addEventListener("change", (e) => {
+  rowLimit = e.target.value;
+  updateTable();
+});
 
 document.querySelectorAll(".time-btn").forEach(btn => {
   btn.addEventListener("click", (e) => {
